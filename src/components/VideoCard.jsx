@@ -27,11 +27,22 @@ const MuteIcon = ({ muted }) => (
 // starts playing, so nothing overlaps the first few seconds of footage.
 const CLEAN_START_MS = 5000;
 
-export default function VideoCard({ video, className = '' }) {
+/*
+  forceActive (optional boolean):
+  When supplied, it overrides the component's own IntersectionObserver-based
+  "inView" state for all play/pause and UI-visibility decisions.  The observer
+  still runs internally and sets everInView so the YouTube iframe is lazily
+  mounted the first time the card enters the viewport — forceActive only
+  replaces the active/inactive decision after that point.
+*/
+export default function VideoCard({ video, className = '', forceActive }) {
   const wrapRef = useRef(null);
   const videoElRef = useRef(null);
   const iframeRef = useRef(null);
   const [inView, setInView] = useState(false);
+  // active = the value that governs play/pause and UI visibility.
+  // When forceActive is provided it takes precedence over inView.
+  const active = forceActive !== undefined ? forceActive : inView;
   const [everInView, setEverInView] = useState(false);
   const [muted, setMuted] = useState(true);
   const [showControls, setShowControls] = useState(false);
@@ -52,29 +63,29 @@ export default function VideoCard({ video, className = '' }) {
   }, []);
 
   // Keep the overlay/mute icon hidden for the first CLEAN_START_MS of
-  // playback each time the card enters view, and hide them again the
-  // moment it scrolls out (so re-entry is clean too).
+  // playback each time the card becomes active, and hide them again the
+  // moment it becomes inactive (so re-entry is clean too).
   useEffect(() => {
     clearTimeout(timerRef.current);
-    if (inView) {
+    if (active) {
       setShowControls(false);
       timerRef.current = setTimeout(() => setShowControls(true), CLEAN_START_MS);
     } else {
       setShowControls(false);
     }
     return () => clearTimeout(timerRef.current);
-  }, [inView]);
+  }, [active]);
 
-  // Native <video> autoplay/pause based on visibility. Same element the
+  // Native <video> autoplay/pause based on active state. Same element the
   // whole time, so play() just resumes where it left off, never restarts.
   useEffect(() => {
     if (video.type !== 'local' || !videoElRef.current) return;
-    if (inView) {
+    if (active) {
       videoElRef.current.play().catch(() => {});
     } else {
       videoElRef.current.pause();
     }
-  }, [inView, video.type]);
+  }, [active, video.type]);
 
   const postYoutubeCommand = (func, args = []) => {
     const win = iframeRef.current?.contentWindow;
@@ -82,12 +93,12 @@ export default function VideoCard({ video, className = '' }) {
     win.postMessage(JSON.stringify({ event: 'command', func, args }), '*');
   };
 
-  // Play/pause the already-mounted YouTube iframe as it enters/leaves
-  // view, instead of unmounting it (which reloaded the video from 0:00).
+  // Play/pause the already-mounted YouTube iframe based on active state,
+  // instead of unmounting it (which reloaded the video from 0:00).
   useEffect(() => {
     if (video.type !== 'youtube' || !everInView) return;
-    postYoutubeCommand(inView ? 'playVideo' : 'pauseVideo');
-  }, [inView, everInView, video.type]);
+    postYoutubeCommand(active ? 'playVideo' : 'pauseVideo');
+  }, [active, everInView, video.type]);
 
   const toggleMute = () => {
     if (video.type === 'local' && videoElRef.current) {

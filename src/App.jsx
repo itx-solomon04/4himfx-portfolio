@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { initLenis, destroyLenis, bindSmoothAnchors } from './lib/smoothScroll.js';
 import Nav from './components/Nav.jsx';
 import ScrollProgress from './components/ScrollProgress.jsx';
 import TimelineRuler from './components/TimelineRuler.jsx';
@@ -13,6 +15,15 @@ import Footer from './components/Footer.jsx';
 import GlobalParticles from './components/GlobalParticles.jsx';
 
 export default function App() {
+  useEffect(() => {
+    initLenis();
+    const unbind = bindSmoothAnchors(-88);
+    return () => {
+      unbind();
+      destroyLenis();
+    };
+  }, []);
+
   return (
     <>
       <GlobalParticles />

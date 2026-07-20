@@ -14,8 +14,8 @@ function ParticleField() {
       gl={{ alpha: true, antialias: false }}
     >
       <ambientLight intensity={0.4} />
-      <Sparkles count={90} scale={[16, 10, 6]} size={2.2} speed={0.22} opacity={0.5} color="#E8C77A" />
-      <Sparkles count={50} scale={[16, 10, 6]} size={1.2} speed={0.12} opacity={0.3} color="#F5D77A" />
+      <Sparkles count={90} scale={[16, 10, 6]} size={2.2} speed={0.22} opacity={0.5} color="#C9A227" />
+      <Sparkles count={50} scale={[16, 10, 6]} size={1.2} speed={0.12} opacity={0.3} color="#D9B030" />
     </Canvas>
   );
 }
