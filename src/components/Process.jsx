@@ -32,10 +32,17 @@ const steps = [
   },
 ];
 
+// How far "early" (as a fraction of the whole track) a card is allowed to
+// reveal before the fill line visually reaches its dot. Small and positive
+// so the reveal feels like it's triggered BY the line arriving, not before.
+const REVEAL_EPSILON = 0.01;
+const CATCH_UP_SPEED = 10;
+
 export default function Process() {
   const roadmapRef = useRef(null);
   const fillRef = useRef(null);
   const dotRefs = useRef([]);
+  const stepRefs = useRef([]);
 
   useEffect(() => {
     const el = roadmapRef.current;
@@ -44,6 +51,7 @@ export default function Process() {
 
     let target = 0;
     let current = 0;
+    let lastTime = null;
     let rafId;
 
     function computeTarget() {
@@ -55,36 +63,47 @@ export default function Process() {
       target = Math.min(1, Math.max(0, traveled / total));
     }
 
-    function loop() {
-      current += (target - current) * 0.12;
-      if (Math.abs(target - current) < 0.0005) current = target;
+    function loop(time) {
+      if (lastTime === null) lastTime = time;
+      const dt = Math.min(0.05, (time - lastTime) / 1000);
+      lastTime = time;
+
+      computeTarget();
+
+      const factor = 1 - Math.exp(-CATCH_UP_SPEED * dt);
+      current += (target - current) * factor;
       fill.style.height = current * 100 + '%';
 
-      // Light each dot up the moment the glowing fill line reaches it,
-      // so the roadmap itself feels driven by scroll, like the reference
-      // sites, instead of a static line with static dots.
       const totalH = el.offsetHeight || 1;
-      dotRefs.current.forEach((dot) => {
+      // Measure every dot's position live via getBoundingClientRect rather
+      // than offsetTop — offsetTop is relative to the dot's own positioned
+      // wrapper (.roadmap-dot is position:absolute), not the roadmap track,
+      // so it doesn't reliably map to a 0–1 fraction of the whole section.
+      const rootRect = el.getBoundingClientRect();
+
+      dotRefs.current.forEach((dot, i) => {
         if (!dot) return;
-        const dotP = dot.offsetTop / totalH;
-        dot.classList.toggle('is-lit', current >= dotP - 0.015);
+        const dotRect = dot.getBoundingClientRect();
+        const dotP = (dotRect.top - rootRect.top) / totalH;
+
+        // Binary reveal: hidden until the line reaches this dot, then
+        // locked visible — and reversible if you scroll back above it.
+        const revealed = current >= dotP - REVEAL_EPSILON;
+
+        dot.classList.toggle('is-lit', revealed);
+
+        const step = stepRefs.current[i];
+        if (step) {
+          step.classList.toggle('is-revealed', revealed);
+        }
       });
 
       rafId = requestAnimationFrame(loop);
     }
 
-    function onScroll() {
-      computeTarget();
-    }
-
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    computeTarget();
     rafId = requestAnimationFrame(loop);
 
     return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
       cancelAnimationFrame(rafId);
     };
   }, []);
@@ -101,12 +120,10 @@ export default function Process() {
           </div>
 
           {steps.map((s, i) => (
-            <Reveal
+            <div
               key={s.n}
-              as="div"
               className="roadmap-step"
-              delay={i * 0.06}
-              y={24}
+              ref={(el) => (stepRefs.current[i] = el)}
             >
               <div className="roadmap-dot" aria-hidden="true">
                 <span
@@ -126,7 +143,7 @@ export default function Process() {
                 <span className="roadmap-tag">{s.tag}</span>
                 <p className="roadmap-desc">{s.desc}</p>
               </div>
-            </Reveal>
+            </div>
           ))}
         </div>
       </div>

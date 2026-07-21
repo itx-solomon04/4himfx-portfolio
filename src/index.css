@@ -1294,7 +1294,16 @@ footer {
    deliberate/locked rather than a quick swap. */
 .video-stack-wrap {
   position: relative;
-  height: 145vh;
+  height: 190vh;
+}
+
+/* Pulls every card except the first one up so its entrance genuinely
+   overlaps the previous card's still-locked dwell time. This overlap is
+   what creates the "next layer slides over a locked layer" effect instead
+   of an abrupt cut. Keep this smaller than (height - 100vh) above, or the
+   two cards will fight to be pinned at the same time. */
+.video-stack-wrap:not(:first-child) {
+  margin-top: -70vh;
 }
 
 .video-stack-sticky {
@@ -1305,8 +1314,9 @@ footer {
   align-items: center;
   justify-content: center;
   transform-origin: center center;
-  will-change: transform, opacity, filter;
+  will-change: transform, opacity;
 }
+
 
 .video-stack-card {
   position: relative;
@@ -1316,6 +1326,17 @@ footer {
 
 .video-stack-card .card {
   box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.7), 0 4px 40px -8px rgba(0, 0, 0, 0.5);
+}
+
+.video-stack-scrim {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  border-radius: 12px;
+  pointer-events: none;
+  z-index: 4;
+  will-change: opacity;
 }
 
 .video-stack-category {
@@ -1406,14 +1427,26 @@ footer {
   }
 }
 
-/* Each step row */
+/* Each step starts completely hidden — nothing shows until the line
+   reaches it. Process.jsx toggles is-revealed the instant the line
+   reaches this step's dot; this transition animates it in, and toggling
+   back off (scrolling back up past the dot) fades it back out. */
 .roadmap-step {
   position: relative;
   padding-bottom: 72px;
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  will-change: opacity, transform;
 }
 
 .roadmap-step:last-child {
   padding-bottom: 0;
+}
+
+.roadmap-step.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 /* Dot column — absolutely placed relative to .roadmap so it sits on the track */
@@ -1435,7 +1468,7 @@ footer {
   box-shadow: none;
   flex-shrink: 0;
   transform: scale(0.85);
-  transition: transform .4s cubic-bezier(.16,.84,.44,1), background-color .4s ease, box-shadow .4s ease;
+  transition: transform .4s cubic-bezier(.16, .84, .44, 1), background-color .4s ease, box-shadow .4s ease;
   /* The dot starts muted (opacity driven by parent .reveal); is-lit is
      toggled on by the rAF loop in Process.jsx as the fill line reaches it. */
 }
