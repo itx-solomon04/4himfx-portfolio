@@ -1328,6 +1328,19 @@ footer {
   box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.7), 0 4px 40px -8px rgba(0, 0, 0, 0.5);
 }
 
+/* Standalone showreel card in Work.jsx — same look as the video-stack
+   cards (rounded, shadowed) but a plain in-flow block, no scroll-lock. */
+.showreel-card {
+  position: relative;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.showreel-card .card {
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.7), 0 4px 40px -8px rgba(0, 0, 0, 0.5);
+}
+
 .video-stack-scrim {
   position: absolute;
   inset: 0;
@@ -1377,39 +1390,23 @@ footer {
   border: 1px solid var(--line);
 }
 
-/* ── Process vertical roadmap ─────────────────────────────────────────── */
-/*
-  .roadmap            – outer flex column; holds the track + all steps.
-  .roadmap-track      – the thin vertical line running full height.
-  .roadmap-step       – a single row: dot column + content column.
-  .roadmap-dot        – positions the marker on the track.
-  .roadmap-dot-inner  – the actual pulsing circle.
-  .roadmap-content    – the card to the right of the dot.
-*/
+/* ── Process: vertical scroll-synced roadmap ──────────────────────────── */
 .roadmap {
   position: relative;
   margin-top: 64px;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  /* Left gutter = dot column width so the track aligns with dots */
-  padding-left: 40px;
 }
 
-/* The continuous vertical line */
 .roadmap-track {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  /* Centre on the dot column: half of 40px padding */
-  left: 19px;
+  top: 6px;
+  bottom: 6px;
+  left: 5px;
   width: 2px;
   background: var(--line-strong);
   border-radius: 2px;
   overflow: hidden;
 }
 
-/* The lit portion of the track, grows as you scroll through the roadmap */
 .roadmap-track-fill {
   position: absolute;
   top: 0;
@@ -1418,21 +1415,13 @@ footer {
   height: 0%;
   background: linear-gradient(180deg, var(--teal), var(--orange));
   box-shadow: 0 0 10px rgba(201, 162, 39, 0.5);
-  /* no transition here -- the rAF loop in Process.jsx handles smoothing */
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .roadmap-track-fill {
-    transition: none;
-  }
-}
-
-/* Each step starts completely hidden — nothing shows until the line
-   reaches it. Process.jsx toggles is-revealed the instant the line
-   reaches this step's dot; this transition animates it in, and toggling
-   back off (scrolling back up past the dot) fades it back out. */
 .roadmap-step {
   position: relative;
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 28px;
   padding-bottom: 72px;
   opacity: 0;
   transform: translateY(18px);
@@ -1449,15 +1438,12 @@ footer {
   transform: translateY(0);
 }
 
-/* Dot column — absolutely placed relative to .roadmap so it sits on the track */
 .roadmap-dot {
-  position: absolute;
-  left: -40px;
-  top: 6px;
-  width: 40px;
+  position: relative;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
+  padding-top: 6px;
 }
 
 .roadmap-dot-inner {
@@ -1465,12 +1451,9 @@ footer {
   height: 12px;
   border-radius: 50%;
   background: var(--line-strong);
-  box-shadow: none;
   flex-shrink: 0;
   transform: scale(0.85);
   transition: transform .4s cubic-bezier(.16, .84, .44, 1), background-color .4s ease, box-shadow .4s ease;
-  /* The dot starts muted (opacity driven by parent .reveal); is-lit is
-     toggled on by the rAF loop in Process.jsx as the fill line reaches it. */
 }
 
 .roadmap-dot-inner.is-lit {
@@ -1479,21 +1462,26 @@ footer {
   transform: scale(1.3);
 }
 
-/* Timecode label above the heading */
+.roadmap-content {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 30px 34px;
+}
+
 .roadmap-tc {
   display: block;
   font-family: 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--teal);
   letter-spacing: 0.1em;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
-/* Step number + title on the same line */
 .roadmap-heading {
   display: flex;
   align-items: baseline;
-  gap: 16px;
+  gap: 14px;
   margin-bottom: 8px;
 }
 
@@ -1501,20 +1489,15 @@ footer {
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   color: var(--orange);
-  letter-spacing: 0.06em;
   flex-shrink: 0;
 }
 
 .roadmap-title {
   font-family: 'EB Garamond', serif;
   font-weight: 700;
-  font-size: clamp(22px, 3vw, 36px);
+  font-size: clamp(20px, 2.6vw, 30px);
   text-transform: uppercase;
   letter-spacing: -0.01em;
-  line-height: 1.05;
-  /* Override the global h2/h3 max-width so it doesn't wrap early */
-  max-width: none;
-  margin-bottom: 0;
 }
 
 .roadmap-tag {
@@ -1531,40 +1514,14 @@ footer {
   color: var(--muted);
   font-size: 15px;
   line-height: 1.7;
-  max-width: none;
+  max-width: 60ch;
 }
 
-/* Content card subtle background */
-.roadmap-content {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 28px 32px;
-  position: relative;
-  overflow: hidden;
-}
-
-.roadmap-content::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: radial-gradient(100% 80% at 100% 0%, rgba(201, 162, 39, 0.07), transparent 60%);
-}
-
-/* Responsive: collapse to a single column on narrow viewports */
 @media (max-width: 640px) {
-  .roadmap {
-    padding-left: 28px;
-  }
-
-  .roadmap-track {
-    left: 13px;
-  }
-
-  .roadmap-dot {
-    left: -28px;
-    width: 28px;
+  .roadmap-step {
+    grid-template-columns: 20px 1fr;
+    gap: 18px;
+    padding-bottom: 52px;
   }
 
   .roadmap-dot-inner {
@@ -1574,9 +1531,5 @@ footer {
 
   .roadmap-content {
     padding: 22px 20px;
-  }
-
-  .roadmap-step {
-    padding-bottom: 52px;
   }
 }

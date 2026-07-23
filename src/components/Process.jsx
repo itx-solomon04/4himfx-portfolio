@@ -32,10 +32,7 @@ const steps = [
   },
 ];
 
-// How far "early" (as a fraction of the whole track) a card is allowed to
-// reveal before the fill line visually reaches its dot. Small and positive
-// so the reveal feels like it's triggered BY the line arriving, not before.
-const REVEAL_EPSILON = 0.01;
+const TRIGGER_LINE = 0.5;
 const CATCH_UP_SPEED = 10;
 
 export default function Process() {
@@ -49,54 +46,45 @@ export default function Process() {
     const fill = fillRef.current;
     if (!el || !fill) return;
 
-    let target = 0;
     let current = 0;
     let lastTime = null;
     let rafId;
-
-    function computeTarget() {
-      const rect = el.getBoundingClientRect();
-      const vh = window.innerHeight;
-      const start = vh * 0.5;
-      const total = rect.height + vh * 0.5;
-      const traveled = start - rect.top;
-      target = Math.min(1, Math.max(0, traveled / total));
-    }
 
     function loop(time) {
       if (lastTime === null) lastTime = time;
       const dt = Math.min(0.05, (time - lastTime) / 1000);
       lastTime = time;
 
-      computeTarget();
+      const roadmapRect = el.getBoundingClientRect();
+      const totalH = el.offsetHeight || 1;
+      const vh = window.innerHeight;
+      const triggerY = vh * TRIGGER_LINE;
+
+      let target = 0;
+
+      dotRefs.current.forEach((dot, i) => {
+        if (!dot) return;
+
+        const dotRect = dot.getBoundingClientRect();
+        const dotCenter = dotRect.top + dotRect.height / 2;
+        const reached = dotCenter <= triggerY;
+
+        dot.classList.toggle('is-lit', reached);
+
+        const step = stepRefs.current[i];
+        if (step) {
+          step.classList.toggle('is-revealed', reached);
+        }
+
+        if (reached) {
+          const dotFraction = (dotRect.top - roadmapRect.top) / totalH;
+          target = Math.max(target, dotFraction);
+        }
+      });
 
       const factor = 1 - Math.exp(-CATCH_UP_SPEED * dt);
       current += (target - current) * factor;
       fill.style.height = current * 100 + '%';
-
-      const totalH = el.offsetHeight || 1;
-      // Measure every dot's position live via getBoundingClientRect rather
-      // than offsetTop — offsetTop is relative to the dot's own positioned
-      // wrapper (.roadmap-dot is position:absolute), not the roadmap track,
-      // so it doesn't reliably map to a 0–1 fraction of the whole section.
-      const rootRect = el.getBoundingClientRect();
-
-      dotRefs.current.forEach((dot, i) => {
-        if (!dot) return;
-        const dotRect = dot.getBoundingClientRect();
-        const dotP = (dotRect.top - rootRect.top) / totalH;
-
-        // Binary reveal: hidden until the line reaches this dot, then
-        // locked visible — and reversible if you scroll back above it.
-        const revealed = current >= dotP - REVEAL_EPSILON;
-
-        dot.classList.toggle('is-lit', revealed);
-
-        const step = stepRefs.current[i];
-        if (step) {
-          step.classList.toggle('is-revealed', revealed);
-        }
-      });
 
       rafId = requestAnimationFrame(loop);
     }

@@ -35,7 +35,7 @@ const CLEAN_START_MS = 5000;
   mounted the first time the card enters the viewport — forceActive only
   replaces the active/inactive decision after that point.
 */
-export default function VideoCard({ video, className = '', forceActive }) {
+export default function VideoCard({ video, className = '', forceActive, keepMounted = true }) {
   const wrapRef = useRef(null);
   const videoElRef = useRef(null);
   const iframeRef = useRef(null);
@@ -81,7 +81,7 @@ export default function VideoCard({ video, className = '', forceActive }) {
   useEffect(() => {
     if (video.type !== 'local' || !videoElRef.current) return;
     if (active) {
-      videoElRef.current.play().catch(() => {});
+      videoElRef.current.play().catch(() => { });
     } else {
       videoElRef.current.pause();
     }
@@ -124,10 +124,11 @@ export default function VideoCard({ video, className = '', forceActive }) {
 
       {video.type === 'youtube' ? (
         <>
-          {/* Mount the iframe once it's first seen, then leave it mounted
-              permanently -- play/pause/mute are handled via postMessage so
-              it never reloads from the start again. */}
-          {everInView && (
+          {/* Only keep an iframe mounted while it's near the active card
+              (see keepMounted from VideoStack) — this caps how many
+              YouTube players can be alive at once, which is what was
+              making scrolling feel heavier the further in you went. */}
+          {everInView && keepMounted ? (
             <iframe
               ref={iframeRef}
               src={youtubeSrc(video.id)}
@@ -135,8 +136,7 @@ export default function VideoCard({ video, className = '', forceActive }) {
               allow="autoplay; encrypted-media"
               frameBorder="0"
             />
-          )}
-          {!everInView && (
+          ) : (
             <img
               src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
               alt={video.title || 'Video thumbnail'}
@@ -160,11 +160,10 @@ export default function VideoCard({ video, className = '', forceActive }) {
       </div>
 
       <button
-        className={`mute-btn${showControls ? ' is-visible' : ''}`}
+        className="mute-btn is-visible"
         onClick={toggleMute}
         aria-label={muted ? 'Unmute video' : 'Mute video'}
         aria-pressed={!muted}
-        tabIndex={showControls ? 0 : -1}
       >
         <MuteIcon muted={muted} />
       </button>
